@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "conport": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "context-portal-mcp",
+        "conport-mcp",
+        "--mode",
+        "stdio",
+        "--workspace_id",
+        "${workspaceFolder}",
+        "--log-file",
+        "./logs/conport.log",
+        "--log-level",
+        "INFO"
+      ],
+      "alwaysAllow": [
+        "get_product_context",
+        "update_product_context",
+        "get_active_context",
+        "update_active_context"
+      ]
+    }
+  }
+}

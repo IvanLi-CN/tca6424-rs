@@ -1,15 +1,18 @@
-//! TCA6424 驱动库错误类型
+//! TCA6424 driver library error types.
 
 use core::fmt::Debug;
+#[cfg(feature = "defmt")]
+use defmt;
 
-/// TCA6424 驱动库错误枚举
+/// Represents possible errors that can occur when interacting with the TCA6424 driver.
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error<I2cError: Debug> {
-    /// 底层 I2C 总线错误
+    /// An error occurred during an underlying I2C bus operation.
     I2c(I2cError),
-    /// 尝试访问保留寄存器或无效引脚
+    /// An attempt was made to access a reserved register address or an invalid pin.
     InvalidRegisterOrPin,
-    // TODO: Add more specific error types as needed
+    // TODO: Add more specific error types as needed, e.g., for invalid arguments
 }
 
 // TODO: Implement From trait for I2cError if possible

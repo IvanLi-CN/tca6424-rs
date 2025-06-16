@@ -1,107 +1,95 @@
-# TCA6424 Rust 驱动库
+# TCA6424 Rust Driver Library
 
-这是一个用于 Texas Instruments TCA6424 低压 24 位 I2C I/O 扩展器的 Rust 驱动库。它基于 `embedded-hal` 特性，并通过 `maybe-async-cfg` crate 提供同步 (sync) 和异步 (async) 两种操作模式的支持。
+This is a Rust driver library for the Texas Instruments TCA6424 low-voltage 24-bit I2C I/O expander. It is based on `embedded-hal` traits and provides support for both synchronous (sync) and asynchronous (async) operation modes via the `maybe-async-cfg` crate.
 
-## 功能
+## Features
 
-- 支持 `embedded-hal` 和 `embedded-hal-async` I2C traits。
-- 通过 `maybe-async-cfg` 实现同步/异步抽象。
-- 提供引脚级别的控制方法：
-    - 设置/获取引脚方向 (输入/输出)
-    - 设置/获取输出引脚状态 (高/低)
-    - 获取输入引脚物理状态 (高/低)
-    - 设置/获取引脚极性反转
-- 提供端口级别的控制方法：
-    - 设置/获取端口方向掩码
-    - 设置/获取输出端口状态掩码
-    - 获取输入端口物理状态掩码
-    - 设置/获取端口极性反转掩码
-- 支持寄存器自动递增 (Auto-Increment) 读写操作，用于高效地操作连续寄存器。
+- Supports `embedded-hal` and `embedded-hal-async` I2C traits.
+- Implements sync/async abstraction using `maybe-async-cfg`.
+- Provides pin-level control methods:
+  - Set/Get pin direction (input/output)
+  - Set/Get output pin state (high/low)
+  - Get input pin physical state (high/low)
+  - Set/Get pin polarity inversion
+- Provides port-level control methods:
+  - Set/Get port direction mask
+  - Set/Get output port state mask
+  - Get input port physical state mask
+  - Set/Get port polarity inversion mask
+- Supports Auto-Increment read/write operations for efficient manipulation of consecutive registers.
 
-## 兼容性
+## Compatibility
 
-本驱动库设计用于 `no_std` 环境，适用于各种嵌入式系统。通过 `async` feature，可以在支持 `embedded-hal-async` 的异步运行时环境中使用。
+This driver library is designed for `no_std` environments, suitable for various embedded systems. With the `async` feature, it can be used in asynchronous runtime environments that support `embedded-hal-async`.
 
-## 使用
+## Usage
 
-将 `tca6424` 添加到您的 `Cargo.toml` 文件的 `[dependencies]` 部分：
+Add `tca6424` to the `[dependencies]` section of your `Cargo.toml` file:
 
 ```toml
-tca6424 = "0.1.0" # 或者指向本地路径 { path = "path/to/tca6424-rs" }
+tca6424 = "0.1.0" # Or point to a local path { path = "path/to/tca6424-rs" }
 ```
 
-如果您需要异步支持，请启用 `async` feature：
+If you need asynchronous support, enable the `async` feature:
 
 ```toml
 tca6424 = { version = "0.1.0", features = ["async"] }
 ```
 
-如果您使用 `defmt` 进行日志输出，请启用 `defmt` feature：
+If you use `defmt` for logging, enable the `defmt` feature:
 
 ```toml
 tca6424 = { version = "0.1.0", features = ["defmt"] }
 ```
 
-### 基本用法 (同步示例)
+### Basic Usage (Async Example)
 
 ```rust
-use embedded_hal::i2c::I2c;
-use tca6424::{Pin, PinDirection, PinState, Tca6424, Error};
+use defmt::info;
+use tca6424::{Tca6424, PinDirection, Port, DEFAULT_ADDRESS};
+use embedded_hal_async::i2c::I2c;
 
-// 假设您有一个实现了 embedded_hal::i2c::I2c trait 的 I2C 总线实例
-// let mut i2c_bus = ...;
-// let address = 0x22; // TCA6424 默认 I2C 地址
-// let mut tca = Tca6424::new(&mut i2c_bus, address).unwrap();
+// Example of core driver usage. For a complete embedded project setup,
+// please refer to `examples/stm32g4/src/main.rs`.
+// Assume you have an `i2c_bus` instance, e.g., `let mut i2c_bus = ...;`
+// and call this code within an asynchronous context.
 
-// // 设置 P00 为输出，并将其设置为高电平
-// tca.set_pin_direction(Pin::P00, PinDirection::Output).unwrap();
-// tca.set_pin_output(Pin::P00, PinState::High).unwrap();
+let address = DEFAULT_ADDRESS;
+let mut tca = Tca6424::new(i2c_bus, address).await.unwrap();
+info!("TCA6424 driver instance created successfully.");
 
-// // 读取 P01 的输入状态
-// let input_state = tca.get_pin_input_state(Pin::P01).unwrap();
-// println!("P01 input state: {:?}", input_state);
+let port0_direction_mask = 0b1111_0000;
+tca.set_port_direction(Port::Port0, port0_direction_mask).await.unwrap();
+info!("Port0 direction set to {:08b}.", port0_direction_mask);
 
-// // 设置 Port0 的所有引脚方向 (例如：P00-P03 输出, P04-P07 输入)
-// let port0_direction_mask = 0b1111_0000;
-// tca.set_port_direction(Port::Port0, port0_direction_mask).unwrap();
-
-// // 使用自动递增读取 Port0, Port1, Port2 的输入状态
-// let mut input_buffer = [0u8; 3];
-// tca.get_ports_input_state_ai(Port::Port0, &mut input_buffer).unwrap();
-// println!("Port0-Port2 input states: {:?}", input_buffer);
+let input_mask = tca.get_port_input_state(Port::Port2).await.unwrap();
+info!("Read Port2 input state: {:08b}", input_mask);
 ```
 
-### 示例代码
+### Example Code
 
-您可以在 `examples/` 目录中找到更完整的示例：
+You can find more complete examples in the `examples/` directory:
 
--   [`examples/sync_example.rs`](examples/sync_example.rs): 使用模拟 I2C 总线展示同步 API 的用法。
--   [`examples/stm32g4/`](examples/stm32g4/): 一个使用 Embassy 框架在 STM32G4 微控制器上运行的异步示例。
+- [`examples/stm32g4/`](examples/stm32g4/): An asynchronous example running on an STM32G4 microcontroller using the Embassy framework.
 
-要运行同步示例：
-
-```bash
-cargo run --example sync_example
-```
-
-要构建 STM32G4 示例 (需要安装 `thumbv7em-none-eabihf` 目标和 `rust-src` 组件)：
+To build the STM32G4 example (requires `thumbv7em-none-eabihf` target and `rust-src` component):
 
 ```bash
 cd examples/stm32g4
 cargo build
 ```
 
-要运行 STM32G4 示例 (需要 probe-rs 和兼容的调试探针)：
+To run the STM32G4 example (requires probe-rs and a compatible debug probe):
 
 ```bash
 cd examples/stm32g4
-cargo run # 使用 .cargo/config.toml 中配置的 runner
+cargo run # Uses the runner configured in .cargo/config.toml
 ```
 
-## 数据手册
+## Datasheet
 
-TCA6424 的详细信息请参考数据手册：[`docs/tca6424.md`](docs/tca6424.md)
+For detailed information on the TCA6424, please refer to the datasheet: [`docs/tca6424.md`](docs/tca6424.md) ([`PDF`](docs/tca6424.pdf))
 
-## 许可证
+## License
 
-本项目根据 MIT 或 Apache-2.0 许可证双重授权。详情请参阅 [LICENSE-MIT](LICENSE-MIT) 和 [LICENSE-APACHE](LICENSE-APACHE) 文件。
+This project is dual-licensed under the MIT or Apache-2.0 licenses. See the [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE) files for details.

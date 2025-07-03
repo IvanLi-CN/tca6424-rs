@@ -102,6 +102,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(not(feature = "async"))]
+use embedded_hal::i2c::I2c;
+#[cfg(feature = "async")]
+use embedded_hal_async::i2c::I2c;
+
 mod data_types;
 pub mod errors;
 mod registers;
@@ -132,7 +137,7 @@ pub struct Tca6424<'a, I2C> {
 )]
 impl<'a, I2C> Tca6424<'a, I2C>
 where
-    I2C: embedded_hal::i2c::I2c,
+    I2C: I2c,
     I2C::Error: core::fmt::Debug,
 {
     /// Creates a new TCA6424 driver instance.
@@ -148,7 +153,7 @@ where
     /// # Returns
     ///
     /// Returns `Ok(Self)` on success, or an `Error` if the I2C bus operation fails.
-    pub async fn new(i2c: &'a mut I2C, address: u8) -> Result<Self, Error<I2C::Error>> {
+    pub fn new(i2c: &'a mut I2C, address: u8) -> Result<Self, Error<I2C::Error>> {
         Ok(Self { i2c, address })
     }
 
@@ -175,7 +180,7 @@ where
         // Command byte: AI=0 (Bit 7), Register address (Bit 0-6)
         let command_byte = register as u8; // AI=0 by default from enum value
         let buffer = [command_byte, value];
-        self.i2c.write(self.address, &buffer).map_err(Error::I2c)
+        self.i2c.write(self.address, &buffer).await.map_err(Error::I2c)
     }
 
     /// Reads a single byte from the specified register.
@@ -201,7 +206,7 @@ where
         let mut read_buffer = [0u8];
         // Send command byte (write mode), then repeated start and read data (read mode)
         self.i2c
-            .write_read(self.address, &[command_byte], &mut read_buffer)
+            .write_read(self.address, &[command_byte], &mut read_buffer).await
             .map_err(Error::I2c)?;
         Ok(read_buffer[0])
     }
@@ -236,7 +241,7 @@ where
         buffer[1..len + 1].copy_from_slice(&values[..len]);
 
         self.i2c
-            .write(self.address, &buffer[..len + 1])
+            .write(self.address, &buffer[..len + 1]).await
             .map_err(Error::I2c)
     }
 
@@ -266,7 +271,7 @@ where
         let command_byte = (start_register as u8) | 0x80; // Set AI bit
         // Send command byte (write mode), then repeated start and read data (read mode)
         self.i2c
-            .write_read(self.address, &[command_byte], buffer)
+            .write_read(self.address, &[command_byte], buffer).await
             .map_err(Error::I2c)
     }
 

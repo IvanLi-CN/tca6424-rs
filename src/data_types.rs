@@ -1,6 +1,5 @@
 //! TCA6424 data type definitions.
 
-#[cfg(feature = "defmt")]
 /// Represents the direction of a TCA6424 pin.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PinDirection {
